@@ -1,9 +1,9 @@
 require 'sinatra'
 require 'sqlite3'
 require 'htmlentities'
+require 'coderay'
 
-URL = 'http://localhost:4567/share/' # URL to the index
-ROBOTS = 'noindex,nofollow'
+URL = 'http://localhost:4567/share/'
 
 helpers do
 	def is_numeric?(i)
@@ -12,10 +12,6 @@ helpers do
 	
 	def htmlentities(paste)
 		HTMLEntities.new.encode(paste, :named)
-	end
-	
-	def mount(inner)
-		"<html>\n<head>\n<meta name=\"robots\" content=\"#{ROBOTS}\" />\n</head>\n<body>\n#{inner}\n</body>\n</html>"
 	end
 end
 
@@ -32,7 +28,7 @@ class ShareThis
 	end
 	
 	def get(id)
-		@db.execute("SELECT paste FROM pastebin WHERE id='#{id}'")[0][0]
+		@db.execute("SELECT paste FROM pastebin WHERE id='#{id}'")[0][0] || nil
 	end
 	
 	def get_all
@@ -59,8 +55,30 @@ class String
 	end
 end
 
+class PasteNotFound < Exception
+end
+
+error PasteNotFound do
+	@title = 'Error'
+	@error = 'Paste not found.'
+	haml :error
+end
+
+error do
+	@title = 'Error'
+	@error = env['sinatra.error'].message
+	haml :error
+end
+
+not_found do
+	@title = '404'
+	@error = 'Error 404: Not found'
+	status 404
+	haml :error
+end
+
 get '/share/?' do
-	mount("<p>cat FILENAME | curl -F 'paste=<-' #{URL}</p>")
+	haml :index
 end
 
 post '/share/' do
@@ -68,17 +86,26 @@ post '/share/' do
 end
 
 get '/share/list' do
-	pastes = ShareThis.new.get_all
-	list = ''
-	pastes.each do |paste|
-		list += "<a href=\"#{paste[0]}\">#{paste[0]}</a> <em>#{paste[1].cut(100)}[...]</em><br />\n"
-	end
-	mount(list)
+	@list = ShareThis.new.get_all
+	haml :list
+end
+
+get '/share/lang' do
+	# list of coderay's supported languages
+end
+
+get '/share/:id>>:lang' do
+	id = params[:id]
+	raise PasteNotFound if !is_numeric?(id)
+	paste = ShareThis.new.get(id)
+	raise PasteNotFound if !paste
+	CodeRay.scan(paste, params[:lang].to_sym).page(:title => '')
 end
 
 get '/share/:id' do
 	id = params[:id]
-	mount('Not found') if !is_numeric?(id)
+	raise PasteNotFound if !is_numeric?(id)
 	paste = ShareThis.new.get(id)
-	!paste ? mount('<p>Not found</p>') : mount("<pre>#{paste}</pre>")
+	raise PasteNotFound if !paste
+	CodeRay.scan(paste, :text).page(:title => '')
 end

@@ -1,0 +1,14 @@
+!!!5
+%html
+	%head
+		%title
+			Pastes
+		%meta(http-equiv='Content-Type' content='text/html; charset=utf-8')
+		%meta(name='robots' content='index, follow')
+	%body
+		-@list.each do |paste|
+			%a(href="#{paste[0]}")
+				#{paste[0]}
+			%em
+				#{paste[1].cut(100)}[...]
+			%br

@@ -1,0 +1,25 @@
+!!!5
+%html
+	%head
+		%title
+			ShareThis
+		%meta(http-equiv='Content-Type' content='text/html; charset=utf-8')
+		%meta(name='robots' content='index, follow')
+	%body
+		%p
+			cat FILENAME | curl -F 'paste=<-' #{URL}
+			%br
+			%em
+				#{URL}
+				%u
+					id
+			to see the pasted text
+			%br
+			%em
+				#{URL}
+				%u
+					id
+				>>
+				%u
+					lang
+			to see the pasted text with syntax highlightning
